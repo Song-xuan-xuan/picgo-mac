@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1220 820" width="1220" height="820" role="img" aria-labelledby="t">
+  <title id="t">内网 IP 访问的路由决策流程</title>
+
+  <style>
+    text { font-family: 'PingFang SC', 'Helvetica Neue', Arial, sans-serif; }
+    .mono { font-family: 'SF Mono', Menlo, Consolas, monospace; }
+    .flow { stroke-dasharray: 10,6; animation: flow 1.1s linear infinite; }
+    @keyframes flow { to { stroke-dashoffset: -32; } }
+  </style>
+
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect width="1220" height="820" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2"/>
+
+  <!-- ===== 起点 ===== -->
+  <rect x="350" y="22" width="520" height="48" rx="24" fill="#6366f1" fill-opacity="0.1" stroke="#6366f1" stroke-width="2"/>
+  <text x="610" y="44" text-anchor="middle" font-size="13.5" font-weight="700" fill="#4338ca">访问一个内网 IP</text>
+  <text x="610" y="61" text-anchor="middle" font-size="11" fill="#6366f1">例如 192.168.1.50 或 10.8.0.5</text>
+
+  <path d="M610 70 L610 96" fill="none" stroke="#94a3b8" stroke-width="2" class="flow" marker-end="url(#arrow)"/>
+
+  <!-- ===== 第 1 步 ===== -->
+  <rect x="100" y="100" width="1020" height="336" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+  <text x="128" y="134" font-size="16" font-weight="700" fill="#1e293b">第 1 步：查询 macOS 本机路由表</text>
+  <text x="1092" y="134" text-anchor="end" font-size="12.5" font-weight="700" fill="#b45309">（越具体的子网优先级越高！）</text>
+  <line x1="128" y1="146" x2="1092" y2="146" stroke="#e2e8f0" stroke-width="1.5"/>
+
+  <path d="M128 146 L128 344" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- 情况 A -->
+  <path d="M128 188 H166" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round"/>
+  <rect x="166" y="158" width="930" height="136" rx="10" fill="#10b981" fill-opacity="0.09" stroke="#10b981" stroke-width="2.5"/>
+  <text x="190" y="185" font-size="15" font-weight="700" fill="#047857">情况 A：目标是 192.168.1.50</text>
+  <text x="190" y="210" font-size="12.5" fill="#334155">因为本机 Wi-Fi（<tspan class="mono" fill="#0f766e">en0</tspan>）IP 是 <tspan class="mono" fill="#0f766e">192.168.1.93/24</tspan>，</text>
+  <text x="190" y="232" font-size="12.5" fill="#334155">系统自带 <tspan class="mono" fill="#0f766e">192.168.1.0/24 → en0</tspan> 的直连子网路由（前缀 <tspan class="mono" fill="#0f766e">/24</tspan>）</text>
+  <text x="190" y="254" font-size="12.5" fill="#334155">比 TUN 的 <tspan class="mono" fill="#0f766e">128.0/1</tspan>（前缀 <tspan class="mono" fill="#0f766e">/1</tspan>）具体得多！</text>
+  <text x="190" y="282" font-size="13.5" font-weight="700" fill="#047857">👉 结果：直接从物理网卡 en0 走公司/家里局域网，TUN 抢不走！</text>
+
+  <!-- 情况 B -->
+  <path d="M128 344 H166" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"/>
+  <rect x="166" y="316" width="930" height="96" rx="10" fill="#f59e0b" fill-opacity="0.09" stroke="#f59e0b" stroke-width="2"/>
+  <text x="190" y="343" font-size="15" font-weight="700" fill="#b45309">情况 B：目标是跨网段的公司服务器（如 10.8.0.5）</text>
+  <text x="190" y="369" font-size="12.5" fill="#334155">本机没有 <tspan class="mono" fill="#b45309">10.8.0.0/16</tspan> 的直连路由，</text>
+  <text x="190" y="393" font-size="12.5" fill="#334155">于是掉入 TUN 的 <tspan class="mono" fill="#b45309">8/5</tspan> 路由 → 进 <tspan class="mono" fill="#b45309">utun4</tspan>（FlClash）！</text>
+
+  <!-- 过渡箭头 -->
+  <path d="M610 436 L610 478" fill="none" stroke="#94a3b8" stroke-width="2" class="flow" marker-end="url(#arrow)"/>
+  <text x="630" y="463" font-size="12" font-weight="700" fill="#64748b">（仅情况 B 进入 FlClash）</text>
+
+  <!-- ===== 第 2 步 ===== -->
+  <rect x="100" y="482" width="1020" height="300" rx="12" fill="#ffffff" stroke="#0ea5e9" stroke-opacity="0.45" stroke-width="2"/>
+  <text x="128" y="516" font-size="16" font-weight="700" fill="#1e293b">第 2 步：FlClash 从上至下匹配规则</text>
+  <line x1="128" y1="528" x2="1092" y2="528" stroke="#e2e8f0" stroke-width="1.5"/>
+
+  <path d="M128 528 L128 676" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- 未配置豁免 -->
+  <path d="M128 568 H166" fill="none" stroke="#f43f5e" stroke-width="2.5" stroke-linecap="round"/>
+  <rect x="166" y="540" width="930" height="94" rx="10" fill="#f43f5e" fill-opacity="0.08" stroke="#f43f5e" stroke-width="2"/>
+  <text x="190" y="571" font-size="14" font-weight="700" fill="#be123c">若未配置豁免：命中学校下发的 <tspan class="mono" fill="#9f1239">IP-CIDR,10.0.0.0/8,🏫 校园网</tspan></text>
+  <text x="190" y="603" font-size="13.5" font-weight="700" fill="#be123c">👉 惨剧：把公司内网请求发进了学校隧道，直接超时失联 ❌</text>
+
+  <!-- 配置了豁免 -->
+  <path d="M128 676 H166" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round"/>
+  <rect x="166" y="648" width="930" height="112" rx="10" fill="#10b981" fill-opacity="0.09" stroke="#10b981" stroke-width="2.5"/>
+  <text x="190" y="676" font-size="15" font-weight="700" fill="#047857">若在 <tspan class="mono" fill="#065f46">LOCAL_EXEMPT</tspan> 配置了豁免：</text>
+  <text x="190" y="704" font-size="13" fill="#334155">优先命中排在前面的 <tspan class="mono" fill="#0f766e">IP-CIDR,10.8.0.0/16,DIRECT</tspan></text>
+  <text x="190" y="734" font-size="13.5" font-weight="700" fill="#047857">👉 结果：FlClash 放行直连，正常访问公司服务器 ✅</text>
+</svg>
